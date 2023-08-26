@@ -58,11 +58,9 @@ services:
   tyk-mongo:
     image: mongo:4.0
     container_name: tyk-mongo
-
     command: ["mongod", "--smallfiles"]
     ports:
       - "27017:27017"
-
     volumes:
       - db-data:/data/db
 
