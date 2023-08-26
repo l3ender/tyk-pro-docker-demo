@@ -1,47 +1,96 @@
 # Tyk Pro Demo using Docker
 
-This compose file is designed to provide a quick, simple demo of the Tyk stack, this includes Tyk Gateway, Tyk Dashboard, Tyk Portal, Mongo, & Redis.
+> **Note**: This demo does not give you access to the Tyk Portal
 
-This repo great for proof of concept and demo purpose, but if you want test performance, you need to move each component to separate machine, following our documentation https://tyk.io/docs/.
+## Quick start
 
-## Step 1: Add your dashboard license
+**Prerequisites**
 
-Create `.env` file `cp .env.example .env`. Then add your license string to `TYK_DB_LICENSEKEY`.
+- [Docker](https://docs.docker.com/get-docker/)
 
-## Step 2: Initialise the Docker containers
+Once you have a license, Run these commands:
 
-Run docker compose:
+1. `git clone https://github.com/TykTechnologies/tyk-pro-docker-demo && cd tyk-pro-docker-demo`
 
-With a `Mongo` database:
-```
-$ docker-compose up
-```
+2. `up.sh`
 
-With a `PostgreSQL` database:
-```
-$ docker-compose -f ./docker-compose.yml -f ./docker-compose.postgres.yml up
+hint: you may need to give the executable permissions if you have an error:
+```bash
+chmod +x up.sh
 ```
 
-Please note that this command may take a while to complete, as Docker needs to download and provision all of the containers.
+Then check the terminal output to log in with your created user.
 
-This will run in non-daemonised mode so you can see all the output.
+## Advanced
 
-## Step 3: Bootstrap the Tyk installation
+### Use a `Mongo` database:
 
-Bootstrap the instance:
+The quick start uses PostgreSQL database. To use a Mongo database issue the
+following command.
 
-Open your browser to http://localhost:3000.  You will be presented with the Bootstrap UI to create your first organisation and admin user.
+```
+$ docker-compose -f ./docker-compose.yml -f ./docker-compose.mongo.yml up
+```
 
-## Tear down
+### Cleanup Docker Containers
 
-To delete all containers as well as remove all volumes from your host:
+To delete all docker containers as well as remove all volumes from your host:
 
-Mongo:
+PostgreSQL:
+
 ```
 $ docker-compose down -v
 ```
 
-PostgreSQL:
+MongoDB:
+
 ```
-$ docker-compose -f ./docker-compose.yml -f ./docker-compose.postgres.yml down -v
+$ docker-compose -f ./docker-compose.yml -f ./docker-compose.mongo.yml down -v
+```
+
+### How to enable TLS in Tyk Gateway and Tyk Dashboard
+
+If required, generate self-signed certs for Dashboard and Gateway, e.g.
+
+```
+$ openssl req -x509 -newkey rsa:4096 -keyout tyk-gateway-private-key.pem -out tyk-gateway-certificate.pem -subj "/CN=*.localhost,tyk-*" -days 365 -nodes
+
+$ openssl req -x509 -newkey rsa:4096 -keyout tyk-dashboard-private-key.pem -out tyk-dashboard-certificate.pem -subj "/CN=*.localhost,tyk-*" -days 365 -nodes
+```
+
+#### Enable TLS in Gateway conf (`tyk.env`)
+
+```
+TYK_GW_POLICIES_POLICYCONNECTIONSTRING=https://tyk-dashboard:3000
+TYK_GW_DBAPPCONFOPTIONS_CONNECTIONSTRING=https://tyk-dashboard:3000
+TYK_GW_HTTPSERVEROPTIONS_USESSL=true
+TYK_GW_HTTPSERVEROPTIONS_CERTIFICATES=[{"domain_name":"localhost","cert_file":"certs/tyk-gateway-certificate.pem","key_file":"certs/tyk-gateway-private-key.pem"}]
+TYK_GW_HTTPSERVEROPTIONS_SSLINSECURESKIPVERIFY=true
+```
+
+#### Enable TLS in Dashboard conf (`tyk_analytics.env`)
+
+```
+TYK_DB_TYKAPI_HOST=https://tyk-gateway
+TYK_DB_HTTPSERVEROPTIONS_USESSL=true
+TYK_DB_HTTPSERVEROPTIONS_CERTIFICATES=[{"domain_name":"localhost","cert_file":"certs/tyk-dashboard-certificate.pem","key_file":"certs/tyk-dashboard-private-key.pem"}]
+TYK_DB_HTTPSERVEROPTIONS_SSLINSECURESKIPVERIFY=true
+```
+
+#### Update docker compose to add certificate volume mounts
+
+`tyk-dashboard`
+
+```
+volumes:
+   - ./certs/tyk-dashboard-certificate.pem/:/opt/tyk-dashboard/certs/tyk-dashboard-certificate.pem
+   - ./certs/tyk-dashboard-private-key.pem/:/opt/tyk-dashboard/certs/tyk-dashboard-private-key.pem
+```
+
+`tyk-gateway`
+
+```
+volumes:
+   - ./certs/tyk-gateway-certificate.pem/:/opt/tyk-gateway/certs/tyk-gateway-certificate.pem
+   - ./certs/tyk-gateway-private-key.pem/:/opt/tyk-gateway/certs/tyk-gateway-private-key.pem
 ```
