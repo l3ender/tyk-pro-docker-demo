@@ -1,0 +1,29 @@
+upstream tyk-gw {
+	server tyk-gateway1:8080;
+	# server tyk-gateway2:8080;
+}
+
+server {
+	listen 80;
+	listen 443 ssl;
+	#server_name  intranet-http01.rbfcu.local intranet.rbfcu.org;
+	port_in_redirect off;
+
+	# openssl req -x509 -newkey rsa:4096 -keyout www.tyk-test.com.key -out www.tyk-test.com.crt -sha256 -days 3650 -nodes
+	ssl_certificate     /etc/nginx/www.tyk-test.com.crt;
+	ssl_certificate_key /etc/nginx/www.tyk-test.com.key;
+	ssl_protocols       TLSv1.2;
+	ssl_ciphers         HIGH:!aNULL:!MD5;
+
+	root /usr/share/nginx/html;
+
+	location / {
+		proxy_pass http://tyk-gw;
+		proxy_next_upstream off;
+		proxy_read_timeout 600;
+	}
+
+	location /bundles {
+		# needed to serve static files
+	}
+}

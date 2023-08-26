@@ -10,17 +10,29 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - ./confs/tyk_analytics.env
+      - ./confs/tyk_analytics-lb.env
     networks:
       - tyk
 
-  tyk-gateway:
+  tyk-gateway1:
     image: tykio/tyk-gateway:v4.3.3
-    container_name: tyk-gateway
+    # image: internal/tyk-gateway:std
+    container_name: tyk-gateway1
     ports:
-      - "8080:8080"
+      - "8081:8080"
     env_file:
       - ./confs/tyk.env
+    networks:
+      - tyk
+
+  tyk-gateway2:
+    image: tykio/tyk-gateway:v4.3.3
+    # image: internal/tyk-gateway:std
+    container_name: tyk-gateway2
+    ports:
+      - "8082:8080"
+    env_file:
+      - ./confs/tyk-lb.env
     networks:
       - tyk
 
@@ -54,6 +66,20 @@ services:
     volumes:
       - db-data:/data/db
 
+    networks:
+      - tyk
+
+  tyk-lb:
+    image: nginx:1.21.6-alpine
+    container_name: tyk-lb
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./confs/default.conf.template:/etc/nginx/templates/default.conf.template
+      - ./confs/www.tyk-test.com.crt:/etc/nginx/www.tyk-test.com.crt
+      - ./confs/www.tyk-test.com.key:/etc/nginx/www.tyk-test.com.key
+      - ./bundles:/usr/share/nginx/html/bundles
     networks:
       - tyk
 
