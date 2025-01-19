@@ -1,11 +1,21 @@
 #!/bin/bash
 
+# Path to the .env file
+env_file=".env"
 
-if grep -q "TYK_DB_LICENSEKEY" ./confs/tyk_analytics.env; then
-    echo "TYK_DB_LICENSEKEY exists in the file! Skipping.."
-else 
+# Check if the .env file exists
+if [ -f "$env_file" ]; then
+    echo ".env file already exists. Skipping creation."
+else
+    # The .env file does not exist, create it and prompt for the license key
+    echo "Creating .env file..."
+    touch "$env_file"
+
     read -n2048 -s -p 'Please enter your Tyk Pro License key: ' license_key
-    echo TYK_DB_LICENSEKEY=$license_key >> confs/tyk_analytics.env
+    echo
+
+    echo "DASH_LICENSE=$license_key" >> "$env_file"
+    echo ".env file created and keys added."
 fi
 
 echo "Bringing Tyk Trial deployment UP..."
@@ -98,7 +108,8 @@ createApiResponse=$(curl -s --location 'http://localhost:3000/api/apis' \
       },
       "proxy": {
           "target_url": "http://echo.tyk-demo.com:8080/trial",
-          "listen_path": "/httpbin"
+          "listen_path": "/httpbin",
+          "strip_listen_path": true
       },
       "version_data": {
         "use_extended_paths": true,
@@ -182,6 +193,8 @@ curl -s -o /dev/null --location 'localhost:3000/api/keys/'$keyName \
 }'
 echo "Created Httpbin API Key"
 
+# Send a setup ping
+curl -s -o /dev/null http://localhost:8080/httpbin/anything/hello -H "Authorization: my_custom_key"
 
 tput setaf 2;
 echo '
@@ -192,9 +205,6 @@ user: dev@tyk.io
 pw: topsecret
 
 Your Tyk Gateway is found at http://localhost:8080
-
-Save the below API key to access the demo Httpbin API
-Httpbin API Key: '$httpbinApiKey'
 
 Press Enter to exit'
 
